@@ -1,0 +1,52 @@
+name: Build EPN DR-16
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build plugin
+        run: cmake --build build --config Release --parallel 4
+
+      - name: DSP tests
+        shell: bash
+        run: |
+          if [ -f build/Release/dr16_tests.exe ]; then build/Release/dr16_tests.exe; else build/dr16_tests; fi
+
+      - name: Upload Windows artefacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: EPN-DR16-Windows
+          path: |
+            build/EPN_DR16_artefacts/Release/VST3
+            build/EPN_DR16_artefacts/Release/Standalone
+
+      - name: Upload macOS artefacts
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: EPN-DR16-macOS
+          path: |
+            build/EPN_DR16_artefacts/Release/VST3
+            build/EPN_DR16_artefacts/Release/AU
+            build/EPN_DR16_artefacts/Release/Standalone
